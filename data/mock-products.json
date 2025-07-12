@@ -1,0 +1,85 @@
+{
+  "products": [
+    {
+      "id": "prod_001",
+      "cropType": "tomato",
+      "title": "Fresh Organic Tomato Box (2kg)",
+      "price": "19000",
+      "currency": "KRW",
+      "image": "https://example.com/tomato.jpg",
+      "buyLink": "https://mock-shop.com/product/organic-tomato-box",
+      "description": "Premium organic tomatoes grown in sustainable farms using traditional Korean farming methods",
+      "seller": "Green Valley Farm",
+      "rating": 4.8,
+      "inStock": true,
+      "category": "vegetables",
+      "tags": ["organic", "fresh", "local", "sustainable"]
+    },
+    {
+      "id": "prod_002",
+      "cropType": "carrot",
+      "title": "Premium Carrot Bundle (1.5kg)",
+      "price": "12500",
+      "currency": "KRW",
+      "image": "https://example.com/carrot.jpg",
+      "buyLink": "https://mock-shop.com/product/premium-carrots",
+      "description": "Sweet and crunchy carrots perfect for cooking and raw consumption",
+      "seller": "Sunrise Agriculture",
+      "rating": 4.6,
+      "inStock": true,
+      "category": "vegetables",
+      "tags": ["sweet", "crunchy", "vitamin-rich"]
+    },
+    {
+      "id": "prod_003",
+      "cropType": "lettuce",
+      "title": "Fresh Lettuce Head (3 pieces)",
+      "price": "8900",
+      "currency": "KRW",
+      "image": "https://example.com/lettuce.jpg",
+      "buyLink": "https://mock-shop.com/product/fresh-lettuce",
+      "description": "Crisp and fresh lettuce heads perfect for salads and wraps",
+      "seller": "Urban Greens",
+      "rating": 4.7,
+      "inStock": true,
+      "category": "leafy-greens",
+      "tags": ["crisp", "fresh", "salad", "healthy"]
+    },
+    {
+      "id": "prod_004",
+      "cropType": "eggplant",
+      "title": "Korean Eggplant (1kg)",
+      "price": "15800",
+      "currency": "KRW",
+      "image": "https://example.com/eggplant.jpg",
+      "buyLink": "https://mock-shop.com/product/korean-eggplant",
+      "description": "Fresh Korean eggplants perfect for traditional dishes like gaji-namul",
+      "seller": "Heritage Farms",
+      "rating": 4.5,
+      "inStock": false,
+      "category": "vegetables",
+      "tags": ["korean", "traditional", "purple", "versatile"]
+    },
+    {
+      "id": "prod_005",
+      "cropType": "potato",
+      "title": "Organic Potato Bag (3kg)",
+      "price": "16200",
+      "currency": "KRW",
+      "image": "https://example.com/potato.jpg",
+      "buyLink": "https://mock-shop.com/product/organic-potatoes",
+      "description": "Versatile organic potatoes perfect for all cooking needs",
+      "seller": "Mountain View Farm",
+      "rating": 4.9,
+      "inStock": true,
+      "category": "root-vegetables",
+      "tags": ["organic", "versatile", "staple", "bulk"]
+    }
+  ],
+  "metadata": {
+    "lastUpdated": "2024-01-15T10:30:00Z",
+    "totalProducts": 5,
+    "supportedCrops": ["tomato", "carrot", "lettuce", "eggplant", "potato"],
+    "defaultCurrency": "KRW"
+  }
+}
