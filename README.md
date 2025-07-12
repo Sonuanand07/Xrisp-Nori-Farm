@@ -6,6 +6,7 @@ A proof-of-concept integration that maps virtual crops from Nori Farm to real-wo
 
 This prototype demonstrates how XrisP's Nori Farm platform can integrate with e-commerce systems to bridge the gap between virtual crop growing and real product fulfillment.
 
+## Vercel Deployed link : https://v0-xris-p-competency-assessment.vercel.app/
 ## ✨ Features
 
 - **Crop Matching**: Maps virtual crop names or NFT IDs to real products
