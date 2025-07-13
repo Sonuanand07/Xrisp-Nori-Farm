@@ -1,5 +1,7 @@
 "use client"
 
+import React, { useContext } from "react"
+import { useParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -8,17 +10,13 @@ import { ArrowLeft, Star } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { LocaleContext } from "@/lib/i18n" // Import LocaleContext
 import { mockProductsArray } from "@/lib/mock-data" // Import centralized mock data array
-import { useContext } from "react"
 
-interface ProductPageProps {
-  params: {
-    slug: string
-  }
-}
+export default function ProductPage() {
+  const params = useParams()
+  const slug = params.slug as string
 
-export default function ProductPage({ params }: ProductPageProps) {
   // Find product by slug from the array
-  const product = mockProductsArray.find((p) => p.slug === params.slug)
+  const product = mockProductsArray.find((p) => p.slug === slug)
   const { toast } = useToast()
   const { t, locale } = useContext(LocaleContext) // Use translation context
 
