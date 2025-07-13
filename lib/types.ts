@@ -1,7 +1,9 @@
+// This file is kept for type definitions, but the mock data is now centralized in lib/mock-data.ts.
+
 export interface CropNFT {
   id: string
   name: string
-  type: "tomato" | "carrot" | "lettuce" | "eggplant" | "potato"
+  type: "tomato" | "carrot" | "lettuce" | "eggplant" | "potato" | "banana" | "radish" | "pumpkin"
   rarity: "common" | "rare" | "epic" | "legendary"
   growthStage: "seed" | "sprout" | "growing" | "mature" | "harvested"
   harvestDate?: string
@@ -9,18 +11,21 @@ export interface CropNFT {
 }
 
 export interface Product {
-  id: string
+  id: string // Added id for consistency
+  cropType: string // Added to link to crop input
   title: string
+  title_ko?: string // Added for Korean translation
   price: string
-  currency: "KRW" | "USD" | "EUR"
   image: string
-  buyLink: string
+  buyLink: string // This will now be an internal path like /mock-shop/product/[slug]
   description: string
+  description_ko?: string // Added for Korean translation
   seller: string
   rating: number
   inStock: boolean
-  category: string
-  tags: string[]
+  slug: string // Added for internal routing
+  category?: string
+  tags?: string[]
 }
 
 export interface CropMatchResult {

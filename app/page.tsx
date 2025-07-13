@@ -2,13 +2,17 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useContext } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Sprout, ShoppingCart, ExternalLink } from "lucide-react"
+import { Loader2, ShoppingCart, ExternalLink, Star } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
+import { useToast } from "@/components/ui/use-toast"
+import { LocaleContext, LanguageSwitcher } from "@/lib/i18n" // Import LocaleContext and LanguageSwitcher
+import { mockProductsArray } from "@/lib/mock-data" // Import centralized mock data array
 
 interface MatchedProduct {
   title: string
@@ -19,6 +23,9 @@ interface MatchedProduct {
   seller: string
   rating: number
   inStock: boolean
+  slug: string
+  title_ko?: string // Korean title
+  description_ko?: string // Korean description
 }
 
 interface CropMatchResult {
@@ -28,100 +35,51 @@ interface CropMatchResult {
   matchReason: string
 }
 
-// Mock product database
-const mockProducts: Record<string, MatchedProduct> = {
-  tomato: {
-    title: "Fresh Organic Tomato Box (2kg)",
-    price: "19,000 KRW",
-    image: "/placeholder.svg?height=200&width=200",
-    buyLink: "https://mock-shop.com/product/organic-tomato-box",
-    description: "Premium organic tomatoes grown in sustainable farms",
-    seller: "Green Valley Farm",
-    rating: 4.8,
-    inStock: true,
-  },
-  carrot: {
-    title: "Premium Carrot Bundle (1.5kg)",
-    price: "12,500 KRW",
-    image: "/placeholder.svg?height=200&width=200",
-    buyLink: "https://mock-shop.com/product/premium-carrots",
-    description: "Sweet and crunchy carrots perfect for cooking",
-    seller: "Sunrise Agriculture",
-    rating: 4.6,
-    inStock: true,
-  },
-  lettuce: {
-    title: "Fresh Lettuce Head (3 pieces)",
-    price: "8,900 KRW",
-    image: "/placeholder.svg?height=200&width=200",
-    buyLink: "https://mock-shop.com/product/fresh-lettuce",
-    description: "Crisp and fresh lettuce heads for salads",
-    seller: "Urban Greens",
-    rating: 4.7,
-    inStock: true,
-  },
-  eggplant: {
-    title: "Korean Eggplant (1kg)",
-    price: "15,800 KRW",
-    image: "/placeholder.svg?height=200&width=200",
-    buyLink: "https://mock-shop.com/product/korean-eggplant",
-    description: "Fresh Korean eggplants perfect for traditional dishes",
-    seller: "Heritage Farms",
-    rating: 4.5,
-    inStock: false,
-  },
-  potato: {
-    title: "Organic Potato Bag (3kg)",
-    price: "16,200 KRW",
-    image: "/placeholder.svg?height=200&width=200",
-    buyLink: "https://mock-shop.com/product/organic-potatoes",
-    description: "Versatile organic potatoes for all cooking needs",
-    seller: "Mountain View Farm",
-    rating: 4.9,
-    inStock: true,
-  },
-}
-
 export default function NoriFarmIntegration() {
   const [cropInput, setCropInput] = useState("")
   const [result, setResult] = useState<CropMatchResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [jsonView, setJsonView] = useState(false)
-
-  const matchCropToProduct = async (cropInput: string): Promise<CropMatchResult> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Extract crop name from input (handle NFT IDs like "Tomato #124")
-    const cropName = cropInput.toLowerCase().replace(/#\d+/g, "").trim()
-
-    // Find matching product
-    const matchedProduct = mockProducts[cropName] || null
-
-    // Calculate confidence based on exact match
-    const confidence = matchedProduct ? 95 : 0
-
-    const matchReason = matchedProduct
-      ? `Exact match found for ${cropName} in product database`
-      : `No matching product found for "${cropName}". Available crops: ${Object.keys(mockProducts).join(", ")}`
-
-    return {
-      crop: cropInput,
-      matchedProduct,
-      confidence,
-      matchReason,
-    }
-  }
+  const { toast } = useToast()
+  const { t, locale } = useContext(LocaleContext) // Use translation context
 
   const handleSearch = async () => {
     if (!cropInput.trim()) return
 
     setLoading(true)
+    setResult(null) // Clear previous result
+    setJsonView(false) // Reset view to card
+
     try {
-      const matchResult = await matchCropToProduct(cropInput)
+      // Call the API route for matching
+      const response = await fetch("/api/match-crop", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cropInput }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `API error: ${response.statusText}`)
+      }
+
+      const matchResult: CropMatchResult = await response.json()
       setResult(matchResult)
     } catch (error) {
       console.error("Error matching crop:", error)
+      setResult({
+        crop: cropInput,
+        matchedProduct: null,
+        confidence: 0,
+        matchReason: `${t("error_occurred")}: ${(error as Error).message}. ${t("try_again")}.`,
+      })
+      toast({
+        title: t("search_failed"),
+        description: `${t("could_not_find_match")}: ${(error as Error).message}`,
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -133,234 +91,355 @@ export default function NoriFarmIntegration() {
     }
   }
 
+  const renderStars = (rating: number) => {
+    const fullStars = Math.floor(rating)
+    const hasHalfStar = rating % 1 !== 0
+    const stars = []
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)
+    }
+    if (hasHalfStar) {
+      stars.push(
+        <Star
+          key="half"
+          className="h-4 w-4 fill-yellow-400 text-yellow-400"
+          style={{ clipPath: "inset(0 50% 0 0)" }}
+        />,
+      )
+    }
+    return stars
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4 py-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sprout className="h-8 w-8 text-green-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Nori Farm Integration</h1>
+    <div className="min-h-screen bg-[#4CAF50] text-gray-900 flex flex-col">
+      {/* Header */}
+      <header className="bg-[#388E3C] text-white py-4 px-6 shadow-md">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/placeholder.svg?height=40&width=40"
+              alt="Nori Farm Logo"
+              width={40}
+              height={40}
+              className="rounded-full"
+            />
+            <span className="text-2xl font-bold">Nori Farm</span>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Map your virtual crops to real-world products. Enter a crop name or NFT ID to find matching products from
-            our partner stores.
-          </p>
+          <nav className="hidden md:flex gap-6 text-lg">
+            <Link href="#" className="hover:text-gray-200 transition-colors">
+              {t("norishop")}
+            </Link>
+            <Link href="#" className="hover:text-gray-200 transition-colors">
+              {t("our_mission")}
+            </Link>
+            <Link href="#" className="hover:text-gray-200 transition-colors">
+              {t("why")}
+            </Link>
+            <Link href="#" className="hover:text-gray-200 transition-colors">
+              {t("how")}
+            </Link>
+            <Link href="#" className="hover:text-gray-200 transition-colors">
+              {t("contact")}
+            </Link>
+          </nav>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Button variant="ghost" className="md:hidden text-white">
+              <MenuIcon className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
+      </header>
 
-        {/* Search Interface */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Crop to Product Matcher
-            </CardTitle>
-            <CardDescription>
-              Enter a crop name (e.g., "tomato", "carrot") or NFT ID (e.g., "Tomato #124")
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter crop name or NFT ID..."
-                value={cropInput}
-                onChange={(e) => setCropInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleSearch}
-                disabled={loading || !cropInput.trim()}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Searching...
-                  </>
-                ) : (
-                  "Find Product"
-                )}
-              </Button>
-            </div>
+      <main className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center">
+        <div className="max-w-4xl w-full space-y-8">
+          {/* Hero Section */}
+          <div className="text-center text-white py-12">
+            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-4 drop-shadow-lg">
+              {t("hero_title_line1")} <br /> {t("hero_title_line2")}
+            </h1>
+            <p className="text-xl md:text-2xl font-medium drop-shadow-md">
+              {t("hero_subtitle_line1")}; {t("hero_subtitle_line2")}
+            </p>
+          </div>
 
-            {/* Sample inputs */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-gray-500">Try:</span>
-              {Object.keys(mockProducts).map((crop) => (
-                <Badge
-                  key={crop}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-green-50"
-                  onClick={() => setCropInput(crop)}
-                >
-                  {crop}
-                </Badge>
-              ))}
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-green-50"
-                onClick={() => setCropInput("Tomato #124")}
-              >
-                Tomato #124
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        {result && (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Match Result</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant={jsonView ? "outline" : "default"} size="sm" onClick={() => setJsonView(false)}>
-                    Card View
-                  </Button>
-                  <Button variant={jsonView ? "default" : "outline"} size="sm" onClick={() => setJsonView(true)}>
-                    JSON View
-                  </Button>
-                </div>
-              </div>
+          {/* Search Interface */}
+          <Card className="shadow-2xl border-none rounded-xl bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold text-green-800">
+                <ShoppingCart className="h-6 w-6" />
+                {t("crop_matcher_title")}
+              </CardTitle>
+              <CardDescription className="text-gray-700 text-base">{t("crop_matcher_description")}</CardDescription>
             </CardHeader>
-            <CardContent>
-              {jsonView ? (
-                <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                  {JSON.stringify(
-                    {
-                      crop: result.crop,
-                      matchedProduct: result.matchedProduct
-                        ? {
-                            title: result.matchedProduct.title,
-                            price: result.matchedProduct.price,
-                            image: result.matchedProduct.image,
-                            buyLink: result.matchedProduct.buyLink,
-                          }
-                        : null,
-                      confidence: result.confidence,
-                      matchReason: result.matchReason,
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={result.confidence > 0 ? "default" : "destructive"}>
-                      {result.confidence}% Match
-                    </Badge>
-                    <span className="text-sm text-gray-600">for "{result.crop}"</span>
-                  </div>
-
-                  {result.matchedProduct ? (
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <Image
-                          src={result.matchedProduct.image || "/placeholder.svg"}
-                          alt={result.matchedProduct.title}
-                          width={200}
-                          height={200}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold">{result.matchedProduct.title}</h3>
-                          <p className="text-gray-600">{result.matchedProduct.description}</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Price:</span>
-                            <span className="font-semibold text-green-600">{result.matchedProduct.price}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Seller:</span>
-                            <span>{result.matchedProduct.seller}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Rating:</span>
-                            <span>⭐ {result.matchedProduct.rating}/5</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Stock:</span>
-                            <Badge variant={result.matchedProduct.inStock ? "default" : "destructive"}>
-                              {result.matchedProduct.inStock ? "In Stock" : "Out of Stock"}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <Button
-                          className="w-full bg-green-600 hover:bg-green-700"
-                          onClick={() => window.open(result.matchedProduct!.buyLink, "_blank")}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Buy Now
-                        </Button>
-                      </div>
-                    </div>
+            <CardContent className="space-y-5">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  placeholder={t("input_placeholder")}
+                  value={cropInput}
+                  onChange={(e) => setCropInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="flex-1 h-12 text-lg border-green-300 focus-visible:ring-green-500"
+                />
+                <Button
+                  onClick={handleSearch}
+                  disabled={loading || !cropInput.trim()}
+                  className="h-12 px-6 text-lg bg-green-700 hover:bg-green-800 text-white shadow-md transition-all duration-200"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      {t("searching")}...
+                    </>
                   ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600 mb-2">No matching product found</p>
-                      <p className="text-sm text-gray-500">{result.matchReason}</p>
-                    </div>
+                    t("find_product")
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                </Button>
+              </div>
 
-        {/* Documentation */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>API Documentation</CardTitle>
-            <CardDescription>
-              This prototype demonstrates the integration between Nori Farm virtual crops and real product databases
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">Supported Crops:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                {Object.keys(mockProducts).map((crop) => (
-                  <Badge key={crop} variant="outline">
-                    {crop}
+              {/* Sample inputs */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-gray-600 font-medium">{t("try")}:</span>
+                {mockProductsArray.map((product) => (
+                  <Badge
+                    key={product.slug}
+                    variant="secondary"
+                    className="cursor-pointer text-green-800 bg-green-100 hover:bg-green-200 transition-colors text-sm px-3 py-1"
+                    onClick={() => setCropInput(product.cropType)}
+                  >
+                    {product.cropType.charAt(0).toUpperCase() + product.cropType.slice(1)}
                   </Badge>
                 ))}
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer text-green-800 bg-green-100 hover:bg-green-200 transition-colors text-sm px-3 py-1"
+                  onClick={() => setCropInput("Tomato #124")}
+                >
+                  Tomato #124
+                </Badge>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div>
-              <h4 className="font-semibold mb-2">Input Formats:</h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Crop name: "tomato", "carrot", "lettuce"</li>
-                <li>• NFT ID format: "Tomato #124", "Carrot #456"</li>
-                <li>• Case insensitive matching</li>
-              </ul>
-            </div>
+          {/* Results */}
+          {result && (
+            <Card className="shadow-2xl border-none rounded-xl bg-white/90 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-2xl font-bold text-green-800">{t("match_result_title")}</CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={jsonView ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => setJsonView(false)}
+                      className={
+                        jsonView ? "border-green-300 text-green-700" : "bg-green-600 hover:bg-green-700 text-white"
+                      }
+                    >
+                      {t("card_view")}
+                    </Button>
+                    <Button
+                      variant={jsonView ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setJsonView(true)}
+                      className={
+                        jsonView ? "bg-green-600 hover:bg-green-700 text-white" : "border-green-300 text-green-700"
+                      }
+                    >
+                      {t("json_view")}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {jsonView ? (
+                  <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm text-gray-800">
+                    {JSON.stringify(
+                      {
+                        crop: result.crop,
+                        matchedProduct: result.matchedProduct
+                          ? {
+                              title: result.matchedProduct.title,
+                              price: result.matchedProduct.price,
+                              image: result.matchedProduct.image,
+                              buyLink: result.matchedProduct.buyLink,
+                            }
+                          : null,
+                        confidence: result.confidence,
+                        matchReason: result.matchReason,
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant={result.confidence > 0 ? "default" : "destructive"}
+                        className="px-3 py-1 text-base"
+                      >
+                        {result.confidence}% {t("match")}
+                      </Badge>
+                      <span className="text-base text-gray-700">
+                        {t("for")} "{result.crop}"
+                      </span>
+                    </div>
 
-            <div>
-              <h4 className="font-semibold mb-2">Response Format:</h4>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-                {`{
+                    {result.matchedProduct ? (
+                      <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div className="space-y-4">
+                          <Image
+                            src={result.matchedProduct.image || "/placeholder.svg"}
+                            alt={
+                              locale === "ko" && result.matchedProduct.title_ko
+                                ? result.matchedProduct.title_ko
+                                : result.matchedProduct.title
+                            }
+                            width={400} // Explicit width
+                            height={300} // Explicit height
+                            className="w-full h-64 object-cover rounded-lg shadow-md"
+                          />
+                        </div>
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="text-3xl font-bold text-green-800">
+                              {locale === "ko" && result.matchedProduct.title_ko
+                                ? result.matchedProduct.title_ko
+                                : result.matchedProduct.title}
+                            </h3>
+                            <p className="text-gray-700 mt-1">
+                              {locale === "ko" && result.matchedProduct.description_ko
+                                ? result.matchedProduct.description_ko
+                                : result.matchedProduct.description}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 text-lg">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">{t("price")}:</span>
+                              <span className="font-bold text-green-700">{result.matchedProduct.price}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">{t("seller")}:</span>
+                              <span className="font-medium">{result.matchedProduct.seller}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">{t("rating")}:</span>
+                              <span className="flex items-center gap-1">
+                                {renderStars(result.matchedProduct.rating)}
+                                <span className="font-medium text-gray-800">{result.matchedProduct.rating}/5</span>
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">{t("stock")}:</span>
+                              <Badge
+                                variant={result.matchedProduct.inStock ? "default" : "destructive"}
+                                className="text-base px-3 py-1"
+                              >
+                                {result.matchedProduct.inStock ? t("in_stock") : t("out_of_stock")}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <Link href={result.matchedProduct.buyLink} passHref>
+                            <Button className="w-full h-12 text-lg bg-green-700 hover:bg-green-800 text-white shadow-md transition-all duration-200">
+                              <ExternalLink className="h-5 w-5 mr-2" />
+                              {t("buy_now")}
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-10">
+                        <p className="text-gray-700 text-lg mb-3">{t("no_matching_product_found")}</p>
+                        <p className="text-base text-gray-600">{result.matchReason}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documentation */}
+          <Card className="shadow-2xl border-none rounded-xl bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl font-bold text-green-800">{t("api_doc_title")}</CardTitle>
+              <CardDescription className="text-gray-700 text-base">{t("api_doc_description")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <h4 className="font-semibold text-lg text-green-800 mb-2">{t("supported_crops")}:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {mockProductsArray.map((product) => (
+                    <Badge
+                      key={product.slug}
+                      variant="outline"
+                      className="text-green-800 bg-green-100 text-sm px-3 py-1"
+                    >
+                      {product.cropType.charAt(0).toUpperCase() + product.cropType.slice(1)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-lg text-green-800 mb-2">{t("input_formats")}:</h4>
+                <ul className="text-base text-gray-700 space-y-1 list-disc list-inside">
+                  <li>{t("crop_name_format")}</li>
+                  <li>{t("nft_id_format")}</li>
+                  <li>{t("case_insensitive_matching")}</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-lg text-green-800 mb-2">{t("response_format")}:</h4>
+                <p className="text-gray-700 text-sm mb-2">{t("response_format_description")}</p>
+                <pre className="bg-gray-100 p-4 rounded text-xs md:text-sm overflow-x-auto text-gray-800">
+                  {`{
   "crop": "Tomato #124",
   "matchedProduct": {
     "title": "Fresh Organic Tomato Box (2kg)",
     "price": "19,000 KRW",
-    "image": "https://...",
-    "buyLink": "https://..."
+    "image": "/placeholder.svg",
+    "buyLink": "/mock-shop/product/fresh-organic-tomato-box",
+    "description": "...",
+    "seller": "...",
+    "rating": 4.8,
+    "inStock": true,
+    "slug": "fresh-organic-tomato-box"
   },
   "confidence": 95,
   "matchReason": "Exact match found..."
 }`}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
+  )
+}
+
+function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </svg>
   )
 }
