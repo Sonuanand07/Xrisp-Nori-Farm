@@ -35,6 +35,16 @@ interface CropMatchResult {
   matchReason: string
 }
 
+const cropImages: Record<string, string> = {
+  tomato: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
+  lettuce: "https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80",
+  cucumber: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80",
+  strawberry: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80",
+  carrot: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80",
+  // Add more crops as needed
+  default: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80",
+}
+
 export default function NoriFarmIntegration() {
   const [cropInput, setCropInput] = useState("")
   const [result, setResult] = useState<CropMatchResult | null>(null)
@@ -117,11 +127,11 @@ export default function NoriFarmIntegration() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="/placeholder.svg?height=40&width=40"
+              src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=80&h=80"
               alt="Nori Farm Logo"
               width={40}
               height={40}
-              className="rounded-full"
+              className="rounded-full bg-white"
             />
             <span className="text-2xl font-bold">Nori Farm</span>
           </div>
@@ -166,10 +176,19 @@ export default function NoriFarmIntegration() {
           {/* Search Interface */}
           <Card className="shadow-2xl border-none rounded-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-2xl font-bold text-green-800">
-                <ShoppingCart className="h-6 w-6" />
-                {t("crop_matcher_title")}
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=32&h=32"
+                  alt="Cart Icon"
+                  width={32}
+                  height={32}
+                  className="rounded"
+                />
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-green-800">
+                  <ShoppingCart className="h-6 w-6" />
+                  {t("crop_matcher_title")}
+                </CardTitle>
+              </div>
               <CardDescription className="text-gray-700 text-base">{t("crop_matcher_description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -204,9 +223,16 @@ export default function NoriFarmIntegration() {
                   <Badge
                     key={product.slug}
                     variant="secondary"
-                    className="cursor-pointer text-green-800 bg-green-100 hover:bg-green-200 transition-colors text-sm px-3 py-1"
+                    className="cursor-pointer text-green-800 bg-green-100 hover:bg-green-200 transition-colors text-sm px-3 py-1 flex items-center gap-1"
                     onClick={() => setCropInput(product.cropType)}
                   >
+                    <Image
+                      src={cropImages[product.cropType.toLowerCase()] || cropImages.default}
+                      alt={product.cropType}
+                      width={20}
+                      height={20}
+                      className="rounded-full"
+                    />
                     {product.cropType.charAt(0).toUpperCase() + product.cropType.slice(1)}
                   </Badge>
                 ))}
@@ -290,15 +316,19 @@ export default function NoriFarmIntegration() {
                       <div className="grid md:grid-cols-2 gap-8 items-center">
                         <div className="space-y-4">
                           <Image
-                            src={result.matchedProduct.image || "/placeholder.svg"}
-                            alt={
-                              locale === "ko" && result.matchedProduct.title_ko
-                                ? result.matchedProduct.title_ko
-                                : result.matchedProduct.title
+                            src={
+                              result.matchedProduct?.image ||
+                              cropImages[result.crop?.toLowerCase() || ""] ||
+                              cropImages.default
                             }
-                            width={400} // Explicit width
-                            height={300} // Explicit height
-                            className="w-full h-64 object-cover rounded-lg shadow-md"
+                            alt={
+                              locale === "ko" && result.matchedProduct?.title_ko
+                                ? result.matchedProduct.title_ko
+                                : result.matchedProduct?.title || result.crop
+                            }
+                            width={400}
+                            height={300}
+                            className="w-full h-64 object-cover rounded-lg shadow-md bg-gray-100"
                           />
                         </div>
                         <div className="space-y-4">
@@ -365,10 +395,28 @@ export default function NoriFarmIntegration() {
           {/* Documentation */}
           <Card className="shadow-2xl border-none rounded-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="text-2xl font-bold text-green-800">{t("api_doc_title")}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=facearea&w=32&h=32"
+                  alt="Docs Icon"
+                  width={32}
+                  height={32}
+                  className="rounded"
+                />
+                <CardTitle className="text-2xl font-bold text-green-800">{t("api_doc_title")}</CardTitle>
+              </div>
               <CardDescription className="text-gray-700 text-base">{t("api_doc_description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="flex justify-center mb-4">
+                <Image
+                  src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=200&q=80"
+                  alt="Documentation Decorative"
+                  width={80}
+                  height={80}
+                  className="rounded-lg"
+                />
+              </div>
               <div>
                 <h4 className="font-semibold text-lg text-green-800 mb-2">{t("supported_crops")}:</h4>
                 <div className="flex flex-wrap gap-2">
