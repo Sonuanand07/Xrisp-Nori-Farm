@@ -6,6 +6,7 @@ A perfected proof-of-concept integration that maps virtual crops from Nori Farm 
 
 This prototype demonstrates how XrisP's Nori Farm platform can integrate with e-commerce systems to bridge the gap between virtual crop growing and real product fulfillment. This version focuses on a polished user experience, robust internal navigation, and internationalization capabilities, addressing all previous issues.
 
+## Vercel Deployed Link : https://v0-xris-p-competency-assessment.vercel.app/
 ## ✨ Features
 
 -   **Multi-language Support**: Toggle between English and Korean for all UI text and product details.
